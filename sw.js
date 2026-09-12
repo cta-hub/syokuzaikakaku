@@ -3,7 +3,7 @@
    VERSION は scripts/update_data.py が index.html と manifest.json の内容から自動計算して書き換えます。
    手で index.html を直してActionsを使わない場合は、VERSION の文字列を何でもいいので変えてください
    （変えないと、スマホに古い版が残り続けます）。 */
-const VERSION = '3b4c2b3045';
+const VERSION = '81953a11a8';
 const CACHE = 'kaidoki-' + VERSION;
 const ASSETS = ['./', './index.html', './manifest.json'];
 
