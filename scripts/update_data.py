@@ -271,33 +271,67 @@ def _ym_from(text: str):
     return None
 
 
-def estat_find_latest(app_id: str):
-    """データカタログから『都市別小売価格』のExcelを探し、最新月の (年月, [(URL, 表題)]) を返す"""
+def _find_key(obj, key: str):
+    """入れ子のJSONから指定キーの値を1つ探す（NEXT_KEY の位置が版によって違うため）"""
+    if isinstance(obj, dict):
+        if key in obj:
+            return obj[key]
+        for v in obj.values():
+            r = _find_key(v, key)
+            if r is not None:
+                return r
+    elif isinstance(obj, list):
+        for v in obj:
+            r = _find_key(v, key)
+            if r is not None:
+                return r
+    return None
+
+
+def estat_catalog_pages(app_id: str, limit: int = 100, max_pages: int = 30):
+    """データカタログを100件ずつ全ページ取得する（limitの上限を超えるとAPIがエラーを返すため）"""
     from urllib.parse import urlencode
 
-    q = urlencode({"appId": app_id, "statsCode": "00200571", "searchWord": "都市別小売価格", "limit": "500"})
-    js = json.loads(http_get(f"{ESTAT_CATALOG}?{q}").decode("utf-8"))
-    root = js.get("GET_DATA_CATALOG", {})
-    res = root.get("RESULT", {})
-    if str(res.get("STATUS")) not in ("0", "1", "2"):
-        raise ParseError(f"e-Stat API エラー: STATUS={res.get('STATUS')} {res.get('ERROR_MSG')}（アプリケーションIDを確認）")
+    start = 1
+    for _ in range(max_pages):
+        p = {"appId": app_id, "statsCode": "00200571", "searchWord": "都市別小売価格", "limit": str(limit)}
+        if start > 1:
+            p["startPosition"] = str(start)
+        js = json.loads(http_get(f"{ESTAT_CATALOG}?{urlencode(p)}").decode("utf-8"))
+        root = js.get("GET_DATA_CATALOG", {})
+        res = root.get("RESULT", {})
+        status = str(res.get("STATUS"))
+        if status != "0":
+            msg = f"e-Stat API エラー: STATUS={status} {res.get('ERROR_MSG')}"
+            if status in ("100", "101", "102", "103"):
+                msg += "（100=該当データなし／101・102=パラメータ不正／103=ID不正 の可能性）"
+            raise ParseError(msg)
+        yield root
+        nxt = _find_key(root, "NEXT_KEY")
+        if not nxt:
+            break
+        start = int(nxt)
 
+
+def estat_find_latest(app_id: str):
+    """データカタログから『都市別小売価格』のExcelを探し、最新月の (年月, [(URL, 表題)]) を返す"""
     cands = []
-    for entry in as_list(root.get("DATA_CATALOG_LIST_INF", {}).get("DATA_CATALOG_INF")):
-        ds_text = json.dumps(entry.get("DATASET", {}), ensure_ascii=False)
-        for r in as_list((entry.get("RESOURCES") or {}).get("RESOURCE")):
-            url = r.get("URL") or ""
-            r_text = json.dumps(r, ensure_ascii=False)
-            fmt = str(r.get("FORMAT", "")).upper()
-            if "XLS" not in fmt and not re.search(r"\.xlsx?", url, re.I):
-                continue
-            if "都市別" not in r_text + ds_text:
-                continue
-            ym = _ym_from(r.get("SURVEY_DATE", "")) or _ym_from(r_text) or _ym_from(ds_text)
-            if ym and url:
-                title = r.get("TITLE", {})
-                title = title.get("NAME") if isinstance(title, dict) else title
-                cands.append((ym, url, str(title)))
+    for root in estat_catalog_pages(app_id):
+        for entry in as_list(root.get("DATA_CATALOG_LIST_INF", {}).get("DATA_CATALOG_INF")):
+            ds_text = json.dumps(entry.get("DATASET", {}), ensure_ascii=False)
+            for r in as_list((entry.get("RESOURCES") or {}).get("RESOURCE")):
+                url = r.get("URL") or ""
+                r_text = json.dumps(r, ensure_ascii=False)
+                fmt = str(r.get("FORMAT", "")).upper()
+                if "XLS" not in fmt and not re.search(r"\.xlsx?", url, re.I):
+                    continue
+                if "都市別" not in r_text + ds_text:
+                    continue
+                ym = _ym_from(r.get("SURVEY_DATE", "")) or _ym_from(r_text) or _ym_from(ds_text)
+                if ym and url:
+                    title = r.get("TITLE", {})
+                    title = title.get("NAME") if isinstance(title, dict) else title
+                    cands.append((ym, url, str(title)))
     if not cands:
         raise ParseError("e-Stat のデータカタログに『都市別小売価格』のExcelが見つかりません")
     latest = max(c[0] for c in cands)
