@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0f14">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="買い時">
+<meta name="format-detection" content="telephone=no">
+<title>買い時チェッカー（札幌）</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAMAAAAKE/YAAAAAkFBMVEX/mT7+lD37kjyhqbWco68j3Pgi0+4k02YizrMhxtkix14ixV6boq6TmaUlwl8huGH4kDz5dz/7R0f6R0fzRUXvRETDdDPuRERveXsXbVgUVUrsQ0PjQkK2NjgoHiAOFBcMGRsLEhcMERYNEBQMEBUNDxQLDxULDxQKDBIHDRMEDRIBDRIADBIFCA4ACRIIAgrnS5RPAAAC50lEQVR42u3cX4+iMBSHYRxEoo5/4rgu4IKlrUsdKf3+327BTNwcrJOdWS8O5vfeNiSPjRdNCieoBlgANNBAAw000EADDTTQQAMNNNBAAw000EADDTTQQAMNNNBAf7EjaRBopU4kpfijVV0fSHWtuKOPdZH/IuVFfeSNVudis9mSNpvirDij1Xux3e5/kvbbbfGuOKPrfLP/0Wu/yWvO6OM5f7tFv+XnI2+0d6eBBhpooIEG+p/SpEGg/Ud93mjVNPSo3zSKO1o1xW5N2hWdmjO6NQfBiBQEnZoxuj3qj17WL6T1y6g96nNGN3nQM7fqIG94o3c+9K5RCmiggQYaaKCfE60lSQ8BLY0lnS5s1mit7aGgWaN5o3Vlk0VIek0OJ8kbbZNw/Eoah8nBaMZoaYuwZdJew8QdWKOTsG9u0QvWfw/tRY8XwgANNNBAAw30k6J7R305BLQ0jlZJ/mgrMlplJHe0SWcxbSWsZI2WLo3nveKlMJzR2ohZ3zxfxqmTjNHSZTcbPZ/PVgcjh4cWQAMNNNBAA/2saFnS9ADQpfUd9VmjdeVESsoqV3LfaZtOIto0a9Wc0aVLo0mvaCKsZozWVkxui1JXMkb7NrptKkwJNNBAAw000EADDTTQQAMNNNBAAw000EADDTTQQAMNNNAPQT9uDlNL86CjqbncIy496HbF/51LcvrkY/eHTrzSVTW9VUfdlW1VrW7VceZk90VR7yuotjCz0jtWYLQu3pV/ttj+m7PF2g2d9NRRlDrZvdIrlvGMFqe2W7FZGI7H4XWbw3EYJlb7BziMLmMnfFPctkX9zSlupRPplJY5/bv7PVakK1pmP+55i2RBSjJ7eeHi3qiMO/PyPpvy9+mFfmmcIBknr69PH+6sWNt7xn7MebkzlKTyTSY8/8dkQlkaki7/vqhOVyp5faa3oq8r9yc9PngGpG80TvXtZ+6vDHDa5hcDGmiggQYaaKCBBhpooIEGGuhBo/8Adtqkgnchzh8AAAAASUVORK5CYII=">
+<style>
+:root{
+  --bg:#0b0f14; --sf:#151b23; --sf2:#1e2733; --bd:#2b3646; --tx:#e8edf3; --mu:#8b98a9;
+  --l0:#22d3ee; --l1:#22c55e; --l2:#9ca3af; --l3:#fb923c; --l4:#ef4444;
+  --ink:#0b0f14;
+}
+*{box-sizing:border-box}
+html{touch-action:manipulation;-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--tx);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI","Meiryo",sans-serif;
+  font-size:16px; line-height:1.4;
+  padding:calc(env(safe-area-inset-top) + 8px) max(12px,env(safe-area-inset-right)) calc(env(safe-area-inset-bottom) + 24px) max(12px,env(safe-area-inset-left));
+  -webkit-tap-highlight-color:transparent;
+}
+button{font:inherit;color:inherit;-webkit-user-select:none;user-select:none;cursor:pointer}
+[hidden]{display:none!important}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:8px}
+h1{font-size:1.05rem;margin:0;white-space:nowrap}
+#src{font-size:.7rem;color:var(--mu);text-align:right;line-height:1.3}
+#src.stale{color:var(--l3)}
+#upd{display:none;margin:0 0 8px;padding:0 12px;min-height:48px;width:100%;border-radius:10px;border:1px solid var(--l0);background:transparent;color:var(--l0);font-weight:700}
+#upd.show{display:block}
+.lbl{font-size:.75rem;color:var(--mu);margin:10px 2px 4px}
+
+/* 検索 */
+.srch{display:flex;gap:6px}
+#q{flex:1;min-width:0;height:52px;padding:0 14px;border-radius:12px;border:1px solid var(--bd);background:var(--sf);color:var(--tx);font-size:1.05rem;outline:none;-webkit-appearance:none;appearance:none}
+#q:focus{border-color:var(--tx)}
+#q::-webkit-search-cancel-button{display:none}
+#qx{flex:none;width:52px;height:52px;border-radius:12px;border:1px solid var(--bd);background:var(--sf2);font-size:1.2rem}
+#results{margin-top:6px;border-radius:12px;border:1px solid var(--bd);background:var(--sf);overflow:hidden}
+.r{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:52px;padding:6px 12px;border:0;border-bottom:1px solid var(--bd);background:transparent;text-align:left}
+.r:last-child{border-bottom:0}
+.r .rn{font-weight:700;font-size:1rem}
+.r .rs{display:block;color:var(--mu);font-size:.75rem;font-weight:400}
+.r .rp{flex:none;color:var(--mu);font-size:.8rem;text-align:right}
+.r .tag{display:inline-block;font-size:.65rem;border:1px solid var(--mu);border-radius:4px;padding:0 3px;margin-left:4px;vertical-align:2px;color:var(--mu);font-weight:400}
+.none{padding:14px 12px;color:var(--mu);font-size:.9rem}
+
+/* 品目グリッド：4列×4行で定番品目を1画面に */
+#items{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+#recent{display:flex;flex-wrap:wrap;gap:6px}
+.it{
+  min-height:54px;padding:4px 2px;border-radius:10px;border:1px solid var(--bd);background:var(--sf);
+  font-weight:700;font-size:clamp(12px,3.7vw,16px);letter-spacing:-.02em;line-height:1.15;overflow:hidden;
+}
+#recent .it{flex:0 1 auto;min-height:48px;min-width:64px;max-width:100%;padding:0 12px;font-size:.9rem;background:var(--sf2);white-space:nowrap;text-overflow:ellipsis}
+.it[aria-pressed="true"],#recent .it[aria-pressed="true"]{background:var(--tx);color:var(--ink);border-color:var(--tx)}
+
+/* 選択中の品目と数量 */
+#sel{font-size:.8rem;color:var(--mu);margin:0 2px 4px}
+#sel b{color:var(--tx);font-size:.95rem}
+#qty{display:flex;flex-wrap:wrap;gap:6px;min-height:52px}
+.q{
+  flex:1 1 auto;min-width:64px;min-height:52px;padding:0 10px;border-radius:10px;border:1px solid var(--bd);background:var(--sf2);
+  font-weight:700;font-size:1rem;white-space:nowrap;
+}
+.q[aria-pressed="true"]{background:var(--tx);color:var(--ink);border-color:var(--tx)}
+.gbox{flex:1 1 90px;display:flex;align-items:center;gap:4px;min-height:52px;padding:0 10px;border-radius:10px;border:1px solid var(--bd);background:var(--sf2)}
+.gbox.on{border-color:var(--tx);box-shadow:inset 0 0 0 1px var(--tx)}
+.gbox input{width:100%;min-width:0;height:48px;background:transparent;border:0;color:var(--tx);font-size:1.25rem;font-weight:700;outline:none}
+.gbox span{color:var(--mu);font-weight:700}
+.hint{color:var(--mu);font-size:.9rem;align-self:center;padding:0 4px}
+
+/* 判定結果 */
+#res{margin-top:10px;border-radius:14px;background:var(--sf);border:1px solid var(--bd);padding:12px;min-height:118px}
+#res .big{font-size:2.6rem;font-weight:800;line-height:1.1;letter-spacing:-.02em}
+#res .big small{font-size:1.35rem;font-weight:800;margin-left:.2em}
+#res .num{font-size:1.15rem;font-weight:700;margin-top:4px}
+#res .num b{font-size:1.35rem}
+#res .msg{color:var(--mu);font-size:1.05rem;padding:18px 4px}
+#res.lv0{background:var(--l0);border-color:var(--l0);color:var(--ink)}
+#res.lv1{background:var(--l1);border-color:var(--l1);color:var(--ink)}
+#res.lv2{background:var(--l2);border-color:var(--l2);color:var(--ink)}
+#res.lv3{background:var(--l3);border-color:var(--l3);color:var(--ink)}
+#res.lv4{background:var(--l4);border-color:var(--l4);color:var(--ink)}
+#scale{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;margin-top:10px}
+#scale div{border-radius:6px;padding:4px 2px;text-align:center;font-size:.72rem;font-weight:700;line-height:1.2;background:rgba(0,0,0,.28);color:var(--tx)}
+#scale div b{display:block;font-size:.95rem}
+#scale div.on{outline:3px solid var(--ink);outline-offset:-1px}
+#res:not([class*="lv"]) #scale div.on{outline-color:var(--tx)}
+#scale .s0{border-bottom:4px solid var(--l0)} #scale .s1{border-bottom:4px solid var(--l1)}
+#scale .s2{border-bottom:4px solid var(--l2)} #scale .s3{border-bottom:4px solid var(--l3)}
+#scale .s4{border-bottom:4px solid var(--l4)}
+#range{font-size:.75rem;margin-top:6px;opacity:.85}
+
+/* 価格入力 */
+#pricebar{display:flex;gap:6px;margin-top:10px}
+.pbox{flex:1;min-width:0;display:flex;align-items:center;gap:6px;min-height:64px;padding:0 12px;border-radius:12px;border:2px solid var(--bd);background:var(--sf)}
+.pbox:focus-within{border-color:var(--tx)}
+#price{flex:1;min-width:0;height:60px;background:transparent;border:0;color:var(--tx);font-size:2rem;font-weight:800;outline:none}
+.pbox span{font-size:1.2rem;font-weight:700;color:var(--mu)}
+#tax,#clr{min-width:64px;min-height:64px;border-radius:12px;border:1px solid var(--bd);background:var(--sf2);font-weight:700;font-size:.9rem;line-height:1.15;white-space:pre}
+#tax.ex{border-color:var(--l3);color:var(--l3)}
+#clr{font-size:1.3rem}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+
+/* 履歴 */
+#hist{margin-top:16px}
+#hist h2{font-size:.95rem;margin:0 2px 6px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+#hist h2 span{font-size:.75rem;color:var(--mu);font-weight:400}
+#hlist{list-style:none;margin:0;padding:0}
+#hlist li{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 0 0 10px;border-left:5px solid var(--l2);background:var(--sf);border-radius:8px;margin-bottom:4px}
+#hlist .d{color:var(--mu);font-size:.8rem;width:3.6em;flex:none}
+#hlist .m{flex:1;min-width:0;font-size:.95rem}
+#hlist .m small{color:var(--mu)}
+#hlist button{flex:none;width:48px;height:48px;border:0;background:transparent;color:var(--mu);font-size:1.2rem}
+#hlist .empty{border-left-color:transparent;color:var(--mu);font-size:.9rem;padding:0 12px}
+footer{margin-top:20px;font-size:.72rem;color:var(--mu);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+#wipe{min-height:48px;padding:0 12px;border-radius:10px;border:1px solid var(--bd);background:transparent;color:var(--mu);font-size:.8rem}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>買い時チェッカー</h1>
+  <div id="src"></div>
+</header>
+<button id="upd" type="button">新しい基準データがあります（タップで更新）</button>
+
+<div class="srch">
+  <input id="q" type="search" enterkeyhint="search" placeholder="商品名で探す（ひらがなOK）" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="商品名で検索">
+  <button id="qx" type="button" aria-label="検索を消す">×</button>
+</div>
+<div id="results" hidden></div>
+
+<div id="pick">
+  <div class="lbl" id="recentLbl" hidden>最近チェックした商品</div>
+  <div id="recent"></div>
+  <div class="lbl">① 定番（札幌市30店調査）</div>
+  <div id="items"></div>
+</div>
+
+<div class="lbl">② 数量</div>
+<div id="sel"></div>
+<div id="qty"><div class="hint">品目を選ぶと出ます</div></div>
+
+<div id="res"><div class="msg">品目 → 数量 → 値段 の順にタップ</div></div>
+
+<div class="lbl">③ 値段</div>
+<div id="pricebar">
+  <label class="pbox">
+    <input id="price" type="number" inputmode="numeric" pattern="[0-9]*" min="1" max="99999" placeholder="0" enterkeyhint="done" autocomplete="off" aria-label="値段">
+    <span>円</span>
+  </label>
+  <button id="tax" type="button" aria-label="税込・税抜の切替">税込</button>
+  <button id="clr" type="button" aria-label="値段を消す">C</button>
+</div>
+
+<section id="hist">
+  <h2><span id="htitle">記録</span><span id="hstat"></span></h2>
+  <ul id="hlist"></ul>
+</section>
+
+<footer>
+  <span id="sw">オフライン準備中…</span>
+  <button id="wipe" type="button">全記録を消去</button>
+</footer>
+
+<script>
+'use strict';
+
+/* =====================================================================
+   基準データ1：札幌市 生活関連商品小売価格調査（市内30店・毎月・税込）
+   → 定番16品目に使う。GitHub Actions（scripts/update_data.py）が自動で書き換えます。
+   avg/min/max：野菜・肉は100gあたりの円、卵は1ケース、牛乳は1本。
+   ===================================================================== */
+const BASE = /*DATA-BEGIN*/{
+  "source": "札幌市 生活関連商品小売価格調査",
+  "period": "2026-09",
+  "published": "2026-09-11",
+  "pdf": "20260911_seikatsukannrennshouhinnkourikakakutyousakekka.pdf",
+  "stores": 30,
+  "prices": {
+    "cabbage": {"avg": 21, "min": 8, "max": 43},
+    "onion": {"avg": 30, "min": 16, "max": 51},
+    "daikon": {"avg": 20, "min": 8, "max": 33},
+    "hakusai": {"avg": 32, "min": 19, "max": 61},
+    "lettuce": {"avg": 47, "min": 26, "max": 110},
+    "carrot": {"avg": 41, "min": 24, "max": 62},
+    "potato": {"avg": 48, "min": 25, "max": 63},
+    "tomato": {"avg": 81, "min": 42, "max": 132},
+    "cucumber": {"avg": 68, "min": 31, "max": 112},
+    "negi": {"avg": 79, "min": 33, "max": 167},
+    "spinach": {"avg": 175, "min": 116, "max": 234},
+    "shiitake": {"avg": 174, "min": 113, "max": 238},
+    "chicken": {"avg": 159, "min": 117, "max": 235},
+    "pork": {"avg": 296, "min": 182, "max": 383},
+    "egg": {"avg": 318, "min": 286, "max": 343},
+    "milk": {"avg": 270, "min": 233, "max": 343}
+  }
+}/*DATA-END*/;
+
+/* =====================================================================
+   基準データ2：総務省 小売物価統計調査（札幌市・毎月・税込）
+   → 検索で出てくる商品。e-Stat から GitHub Actions が自動で取り込みます（手で書かない）。
+   c:品目符号 n:品目名 s:銘柄（調査している商品の規格） u:数量単位 g:1単位のg（ml）数（無ければnull）
+   v:1なら液体（ml） p:札幌市の価格（1単位あたり円） k:よみがな
+   ===================================================================== */
+const ESTAT = /*ESTAT-BEGIN*/{
+  "period": null,
+  "file": null,
+  "items": []
+}/*ESTAT-END*/;
+
+/* =====================================================================
+   定番品目の定義（表示名・1個あたりg・数量プリセット・検索用のよみ）
+   g   : 1個（1玉・1本）あたりのグラム数の目安
+   n   : 個数の倍率（例 半玉=0.5, 3個=3）
+   grams: 総グラム数を直接指定（例 1袋(1kg)=1000）
+   unit: g換算しない品目（卵・牛乳）。1単位の値段でそのまま比較
+   kana: 検索で引っかける別名（スペース区切り）
+   ===================================================================== */
+const CORE = [
+  {id:'cabbage',  name:'キャベツ',   g:1200, presets:[{l:'1玉',n:1},{l:'半玉',n:0.5},{l:'1/4',n:0.25}]},
+  {id:'onion',    name:'玉ねぎ',     g:200,  kana:'たまねぎ', presets:[{l:'1個',n:1},{l:'3個',n:3},{l:'1袋(1kg)',grams:1000}]},
+  {id:'daikon',   name:'大根',       g:1000, kana:'だいこん', presets:[{l:'1本',n:1},{l:'半分',n:0.5}]},
+  {id:'hakusai',  name:'白菜',       g:2000, kana:'はくさい', presets:[{l:'1玉',n:1},{l:'1/2',n:0.5},{l:'1/4',n:0.25}]},
+  {id:'lettuce',  name:'レタス',     g:300,  presets:[{l:'1玉',n:1}]},
+  {id:'carrot',   name:'にんじん',   g:150,  kana:'人参', presets:[{l:'1本',n:1},{l:'3本',n:3}]},
+  {id:'potato',   name:'じゃがいも', g:150,  kana:'ばれいしょ 馬鈴薯', presets:[{l:'1個',n:1},{l:'1袋(1kg)',grams:1000}]},
+  {id:'tomato',   name:'トマト',     g:150,  presets:[{l:'1個',n:1},{l:'1パック(4個)',n:4}]},
+  {id:'cucumber', name:'きゅうり',   g:100,  kana:'胡瓜', presets:[{l:'1本',n:1},{l:'3本',n:3}]},
+  {id:'negi',     name:'長ねぎ',     g:120,  kana:'ながねぎ ねぎ', presets:[{l:'1本',n:1},{l:'3本',n:3}]},
+  {id:'spinach',  name:'ほうれん草', g:200,  kana:'ほうれんそう', presets:[{l:'1袋',n:1}]},
+  {id:'shiitake', name:'生しいたけ', g:100,  kana:'なましいたけ しいたけ 椎茸', presets:[{l:'1パック',n:1}]},
+  {id:'chicken',  name:'鶏もも肉',   g:100,  kana:'とりももにく とりにく けいにく 鶏肉', gInput:true, presets:[{l:'100g単価',grams:100},{l:'300g',grams:300},{l:'500g',grams:500}]},
+  {id:'pork',     name:'豚ロース',   g:100,  kana:'ぶたろーす ぶたにく 豚肉', gInput:true, presets:[{l:'100g単価',grams:100},{l:'300g',grams:300},{l:'500g',grams:500}]},
+  {id:'egg',      name:'卵(10個)',   unit:'1ケース', kana:'たまご けいらん 鶏卵', presets:[{l:'1ケース',n:1}]},
+  {id:'milk',     name:'牛乳(1L)',   unit:'1本',     kana:'ぎゅうにゅう', presets:[{l:'1本',n:1}]},
+];
+
+/* 判定の閾値（平均に対する倍率） */
+const LEVELS = [
+  {max:0.7,      label:'激安', sub:'まとめ買い', short:'激安'},
+  {max:0.9,      label:'安い', sub:'買い',       short:'安い'},
+  {max:1.1,      label:'相場どおり', sub:'',     short:'相場'},
+  {max:1.3,      label:'やや高い', sub:'',       short:'やや高'},
+  {max:Infinity, label:'高い', sub:'見送り',     short:'高い'},
+];
+const TAX = 1.08;          // 食品の軽減税率。「税抜」モードの入力に掛ける
+const HIST_MAX = 500;      // 履歴の最大件数（超えたら古い順に削除）
+const K_HIST = 'kaidoki.history.v1', K_SET = 'kaidoki.settings.v1';
+
+/* ---------- 品目一覧を組み立てる（定番＋総務省データ） ---------- */
+const ymText = p => { if(!p) return ''; const [y, m] = p.split('-').map(Number); return y + '年' + m + '月'; };
+const fmtAmount = (x, vol) => x >= 1000 && x % 1000 === 0 ? (x / 1000) + (vol ? 'L' : 'kg') : x + (vol ? 'ml' : 'g');
+const yen = v => Math.round(v).toLocaleString('ja-JP');
+
+const ALL = CORE.map(it => {
+  const b = BASE.prices[it.id];
+  return Object.assign({}, it, {src:'core', avg:b.avg, min:b.min, max:b.max});
+});
+ESTAT.items.forEach(e => {
+  const it = {id:'e' + e.c, name:e.n, kana:e.k || '', spec:e.s || '', src:'estat', uLabel:e.u || '1単位', rawP:e.p};
+  if(e.g){
+    // 重さ（量）が分かる商品：100g（100ml）あたりで比較。調査単位＋よく使う量をプリセットに
+    const vol = !!e.v;
+    const sizes = [...new Set([e.g, 100, 200, 300, 500, 1000])].sort((a, b) => a - b).slice(0, 5);
+    Object.assign(it, {g:100, vol, gInput:true, avg:e.p / e.g * 100,
+      presets:sizes.map(x => ({l: x === e.g && e.u ? e.u : fmtAmount(x, vol), grams:x}))});
+  } else {
+    // 重さが分からない商品：調査と同じ「1単位」の値段で比較
+    Object.assign(it, {avg:e.p, unit:e.u || '1単位', presets:[{l:e.u || '1単位', n:1}]});
+  }
+  ALL.push(it);
+});
+const BY_ID = Object.fromEntries(ALL.map(it => [it.id, it]));
+
+/* ---------- 検索（ひらがな・カタカナ・漢字どれでも） ---------- */
+const norm = s => (s || '').normalize('NFKC').toLowerCase()
+  .replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60))   // カタカナ→ひらがな
+  .replace(/[\s・()（）「」『』,，、.．\-ー~〜]/g, '');
+ALL.forEach(it => {
+  it._n = norm(it.name);
+  it._k = (it.kana || '').split(/\s+/).map(norm).filter(Boolean);
+  it._s = norm(it.spec);
+});
+function search(qRaw){
+  const q = norm(qRaw); if(!q) return [];
+  const hits = [];
+  for(const it of ALL){
+    let score = -1;
+    if(it._n.startsWith(q) || it._k.some(k => k.startsWith(q))) score = 0;
+    else if(it._n.includes(q) || it._k.some(k => k.includes(q))) score = 1;
+    else if(it._s.includes(q)) score = 2;
+    if(score >= 0) hits.push([score + (it.src === 'core' ? 0 : 0.5), it.name.length, it]);
+  }
+  hits.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  return hits.slice(0, 40).map(h => h[2]);
+}
+
+/* ---------- 保存（localStorage は使えない環境があるので必ず try/catch） ---------- */
+function load(key, def){ try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : def; }catch(e){ return def; } }
+function save(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+
+const $ = s => document.querySelector(s);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; };
+
+const settings = Object.assign({taxEx:false}, load(K_SET, {}));
+let history = load(K_HIST, []);
+if(!Array.isArray(history)) history = [];
+
+const state = { item:null, preset:-1, customG:0, entryId:null };
+
+/* ---------- 計算 ---------- */
+function amount(){
+  const it = state.item; if(!it) return null;
+  if(state.preset === 'g') return state.customG > 0 ? {grams:state.customG, label:fmtAmount(state.customG, it.vol)} : null;
+  const p = it.presets[state.preset]; if(!p) return null;
+  if(it.unit) return {count:p.n, label:p.l};
+  return {grams: p.grams != null ? p.grams : it.g * p.n, label:p.l};
+}
+const toBase = price => settings.taxEx ? Math.floor(price * TAX) : price;
+function unitPrice(price, amt){
+  const p = toBase(price);
+  return amt.grams != null ? p / amt.grams * 100 : p / amt.count;
+}
+function levelOf(ratio){ for(let i=0;i<LEVELS.length;i++) if(ratio <= LEVELS[i].max + 1e-9) return i; return LEVELS.length - 1; }
+function priceLines(amt, avg){
+  const mult = amt.grams != null ? amt.grams / 100 : amt.count;
+  return LEVELS.slice(0, 4).map(L => {
+    let v = avg * L.max * mult;
+    if(settings.taxEx) v = v / TAX;
+    return Math.floor(v + 1e-9);
+  });
+}
+const fmtUnit = v => v < 100 ? (Math.round(v * 10) / 10).toString() : Math.round(v).toString();
+const unitName = it => it.unit ? it.unit : (it.vol ? '100ml' : '100g');
+
+/* ---------- 描画：品目ボタン ---------- */
+function itemButton(it){
+  const b = el('button', 'it', it.name);
+  b.type = 'button'; b.dataset.id = it.id; b.setAttribute('aria-pressed', String(state.item === it));
+  b.addEventListener('click', () => selectItem(it));
+  return b;
+}
+function renderItems(){
+  const box = $('#items'); box.textContent = '';
+  CORE.forEach(c => box.appendChild(itemButton(BY_ID[c.id])));
+}
+// 最近チェックした（定番以外の）商品。よく買う物を検索し直さずに済むように
+function renderRecent(){
+  const box = $('#recent'); box.textContent = '';
+  const seen = new Set();
+  for(let i = history.length - 1; i >= 0 && seen.size < 8; i--){
+    const it = BY_ID[history[i].id];
+    if(it && it.src !== 'core' && !seen.has(it.id)){ seen.add(it.id); box.appendChild(itemButton(it)); }
+  }
+  $('#recentLbl').hidden = seen.size === 0;
+}
+
+/* ---------- 検索結果 ---------- */
+function renderResults(){
+  const q = $('#q').value, box = $('#results');
+  box.textContent = '';
+  if(!norm(q)){ box.hidden = true; $('#pick').hidden = false; return; }
+  const hits = search(q);
+  box.hidden = false; $('#pick').hidden = true;
+  if(!hits.length){
+    box.appendChild(el('div', 'none', ESTAT.items.length
+      ? '見つかりません（別の言い方・漢字でも試してください）'
+      : '見つかりません。総務省データ（検索用の品目）がまだ取り込まれていません'));
+    return;
+  }
+  hits.forEach(it => {
+    const b = el('button', 'r'); b.type = 'button';
+    const left = el('span');
+    const n = el('span', 'rn', it.name);
+    if(it.src === 'core') n.appendChild(el('span', 'tag', '定番'));
+    left.appendChild(n);
+    if(it.spec) left.appendChild(el('span', 'rs', it.spec));
+    const right = el('span', 'rp', it.src === 'core' ? '平均' + it.avg + '円/' + unitName(it) : it.uLabel + ' ' + yen(it.rawP) + '円');
+    b.append(left, right);
+    b.addEventListener('click', () => {
+      $('#q').value = ''; $('#q').blur(); renderResults(); selectItem(it);
+      // 検索から選んだ時は、数量ボタンが見える位置までスクロール（1単位の商品は値段欄にフォーカス済み）
+      if(it.presets.length > 1) $('#sel').scrollIntoView({block:'start', behavior:'smooth'});
+    });
+    box.appendChild(b);
+  });
+}
+
+function selectItem(it){
+  state.item = it; state.preset = -1; state.customG = 0; state.entryId = null;
+  $('#price').value = '';
+  document.querySelectorAll('.it').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === it.id)));
+  const sel = $('#sel'); sel.textContent = '';
+  sel.append(el('b', null, it.name));
+  if(it.spec) sel.append('　' + it.spec);
+  renderQty();
+  // プリセットが1つだけの品目は自動で選択 → すぐ値段入力へ（2タップで完了）
+  if(it.presets.length === 1){ selectPreset(0, true); } else { update(); }
+  renderHistory();
+}
+
+function renderQty(){
+  const box = $('#qty'); box.textContent = '';
+  const it = state.item;
+  it.presets.forEach((p, i) => {
+    const b = el('button', 'q', p.l);
+    b.type = 'button'; b.setAttribute('aria-pressed', String(state.preset === i));
+    b.addEventListener('click', () => selectPreset(i, true));
+    box.appendChild(b);
+  });
+  if(it.gInput){
+    const g = el('label', 'gbox' + (state.preset === 'g' ? ' on' : ''));
+    const inp = el('input');
+    Object.assign(inp, {type:'number', inputMode:'numeric', placeholder:it.vol ? 'ml数' : 'g数', min:1, max:99999, autocomplete:'off'});
+    inp.setAttribute('pattern', '[0-9]*'); inp.setAttribute('aria-label', it.vol ? 'ミリリットル数' : 'グラム数'); inp.id = 'gin';
+    if(state.customG) inp.value = state.customG;
+    inp.addEventListener('input', () => {
+      const v = parseInt(inp.value, 10);
+      state.customG = v > 0 ? v : 0; state.preset = 'g'; state.entryId = null;
+      box.querySelectorAll('.q').forEach(b => b.setAttribute('aria-pressed', 'false'));
+      g.classList.add('on');
+      update();
+    });
+    g.append(inp, el('span', null, it.vol ? 'ml' : 'g'));
+    box.appendChild(g);
+  }
+}
+
+function selectPreset(i, focusPrice){
+  state.preset = i; state.entryId = null;
+  document.querySelectorAll('#qty .q').forEach((b, j) => b.setAttribute('aria-pressed', String(j === i)));
+  const g = $('.gbox'); if(g) g.classList.remove('on');
+  update();
+  // タップの処理中に focus すれば iOS でも数字キーパッドが開く
+  if(focusPrice && !$('#price').value) $('#price').focus();
+}
+
+function currentPrice(){ const v = parseInt($('#price').value, 10); return v > 0 && v < 100000 ? v : 0; }
+
+function update(){
+  const res = $('#res'); res.className = ''; res.textContent = '';
+  const it = state.item;
+  if(!it){ res.appendChild(el('div', 'msg', '品目 → 数量 → 値段 の順にタップ')); return; }
+  const amt = amount();
+  if(!amt){ res.appendChild(el('div', 'msg', it.name + '：数量をタップ')); return; }
+
+  const price = currentPrice();
+  const lines = priceLines(amt, it.avg);
+  let lv = -1;
+  if(price){
+    const u = unitPrice(price, amt);
+    const ratio = u / it.avg;
+    lv = levelOf(ratio);
+    const L = LEVELS[lv];
+    res.className = 'lv' + lv;
+    const big = el('div', 'big', L.label);
+    if(L.sub) big.appendChild(el('small', null, '・' + L.sub));
+    // 小数1桁まで（整数に丸めると「−30%なのに激安じゃない」のような境界の矛盾が見える）
+    const pct = Math.round((ratio - 1) * 1000) / 10;
+    const pctTxt = pct === 0 ? '±0%' : (pct > 0 ? '+' : '−') + Math.abs(pct).toFixed(1) + '%';
+    const num = el('div', 'num');
+    num.append(unitName(it) + 'あたり ', el('b', null, fmtUnit(u) + '円'), '（平均' + fmtUnit(it.avg) + '円）');
+    const num2 = el('div', 'num');
+    num2.append('平均比 ', el('b', null, pctTxt));
+    res.append(big, num, num2);
+  } else {
+    res.appendChild(el('div', 'num', it.name + ' ' + amt.label + ' の目安（' + (settings.taxEx ? '税抜' : '税込') + '）'));
+  }
+  // 価格ライン：「この数量なら何円以下で◯◯」
+  const sc = el('div'); sc.id = 'scale';
+  LEVELS.forEach((L, i) => {
+    const c = el('div', 's' + i + (i === lv ? ' on' : ''));
+    c.append(L.short, el('b', null, i < 4 ? '〜' + yen(lines[i]) : yen(lines[3] + 1) + '〜'));
+    sc.appendChild(c);
+  });
+  res.appendChild(sc);
+  const rg = el('div'); rg.id = 'range';
+  rg.textContent = it.src === 'core'
+    ? '札幌市' + ymText(BASE.period) + '・' + BASE.stores + '店：平均' + it.avg + '円／最安' + it.min + '〜最高' + it.max + '円（' + unitName(it) + '・税込）'
+    : '総務省 小売物価統計 札幌市' + ymText(ESTAT.period) + '：' + it.uLabel + ' ' + yen(it.rawP) + '円（税込）' + (it.spec ? '／調査銘柄：' + it.spec : '');
+  res.appendChild(rg);
+}
+
+/* ---------- 履歴 ---------- */
+function commitEntry(){
+  const it = state.item, amt = amount(), price = currentPrice();
+  if(!it || !amt || !price) return;
+  const u = unitPrice(price, amt);
+  const entry = { t:Date.now(), id:it.id, q:amt.label, p:price, tx:settings.taxEx ? 1 : 0, u:Math.round(u * 10) / 10, lv:levelOf(u / it.avg) };
+  // 同じ品目・数量のまま値段を打ち直した場合は、新規追加せず上書き
+  const idx = state.entryId ? history.findIndex(h => h.t === state.entryId) : -1;
+  if(idx >= 0){ entry.t = state.entryId; history[idx] = entry; }
+  else { history.push(entry); state.entryId = entry.t; }
+  if(history.length > HIST_MAX) history.splice(0, history.length - HIST_MAX);
+  save(K_HIST, history);
+  renderHistory(); renderRecent();
+}
+
+function renderHistory(){
+  const it = state.item, list = $('#hlist'); list.textContent = '';
+  if(!it){ $('#htitle').textContent = '記録'; $('#hstat').textContent = '全' + history.length + '件'; list.appendChild(el('li', 'empty', '品目を選ぶと、その品目の過去の記録が出ます')); return; }
+  const rows = history.filter(h => h.id === it.id).sort((a, b) => b.t - a.t);
+  const un = unitName(it);
+  $('#htitle').textContent = it.name + ' の記録';
+  $('#hstat').textContent = rows.length ? rows.length + '件・最安 ' + fmtUnit(Math.min(...rows.map(r => r.u))) + '円/' + un : '';
+  if(!rows.length){ list.appendChild(el('li', 'empty', 'まだ記録なし（値段を入れてキーボードを閉じると記録）')); return; }
+  rows.slice(0, 50).forEach(r => {
+    const d = new Date(r.t);
+    const li = el('li'); li.style.borderLeftColor = 'var(--l' + r.lv + ')';
+    const m = el('div', 'm');
+    m.append(r.q + ' ' + yen(r.p) + '円' + (r.tx ? '(税抜)' : '') + ' ', el('small', null, '→ ' + fmtUnit(r.u) + '円/' + un + '・' + LEVELS[r.lv].short));
+    const del = el('button', null, '×'); del.type = 'button'; del.setAttribute('aria-label', 'この記録を削除');
+    del.addEventListener('click', () => {
+      history = history.filter(h => h.t !== r.t);
+      if(state.entryId === r.t) state.entryId = null;
+      save(K_HIST, history); renderHistory(); renderRecent();
+    });
+    li.append(el('div', 'd', (d.getMonth() + 1) + '/' + d.getDate()), m, del);
+    list.appendChild(li);
+  });
+}
+
+function renderTax(){
+  const b = $('#tax');
+  b.textContent = settings.taxEx ? '税抜\n×1.08' : '税込';
+  b.classList.toggle('ex', settings.taxEx);
+}
+
+/* ---------- 基準データの鮮度表示（毎月更新されるはずなので、古ければ自動更新の停止を疑う） ---------- */
+function monthsOld(p){ if(!p) return 0; const [y, m] = p.split('-').map(Number); const n = new Date(); return (n.getFullYear() * 12 + n.getMonth() + 1) - (y * 12 + m); }
+function renderSource(){
+  const src = $('#src');
+  let t = '基準：札幌市' + ymText(BASE.period) + '（税込）';
+  if(ESTAT.period) t += '＋総務省' + ymText(ESTAT.period) + ' ' + ESTAT.items.length + '品目';
+  src.textContent = t;
+  if(monthsOld(BASE.period) >= 2 || (ESTAT.period && monthsOld(ESTAT.period) >= 3)){ src.textContent += ' ⚠古い可能性'; src.classList.add('stale'); }
+}
+
+/* ---------- イベント ---------- */
+const priceEl = $('#price');
+priceEl.addEventListener('input', () => { if(priceEl.value.length > 5) priceEl.value = priceEl.value.slice(0, 5); update(); });
+priceEl.addEventListener('change', commitEntry);   // キーボードを閉じた／他をタップした時に記録
+priceEl.addEventListener('keydown', e => { if(e.key === 'Enter') priceEl.blur(); });
+$('#clr').addEventListener('click', () => { priceEl.value = ''; state.entryId = null; update(); priceEl.focus(); });
+$('#tax').addEventListener('click', () => { settings.taxEx = !settings.taxEx; save(K_SET, settings); state.entryId = null; renderTax(); update(); });
+$('#q').addEventListener('input', renderResults);   // 変換前のひらがなの段階でも候補が出る
+$('#q').addEventListener('keydown', e => { if(e.key === 'Enter' && !e.isComposing){ e.preventDefault(); const first = $('#results .r'); if(first) first.click(); } });
+$('#qx').addEventListener('click', () => { $('#q').value = ''; renderResults(); });
+$('#wipe').addEventListener('click', () => {
+  if(!history.length) return;
+  if(confirm('全' + history.length + '件の記録を消去しますか？')){ history = []; state.entryId = null; save(K_HIST, history); renderHistory(); renderRecent(); }
+});
+
+renderItems(); renderRecent(); renderTax(); renderSource(); renderHistory(); update();
+
+/* ---------- Service Worker（オフライン対応） ---------- */
+if('serviceWorker' in navigator){
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('./sw.js').then(() => navigator.serviceWorker.ready).then(() => {
+    $('#sw').textContent = 'オフライン準備完了（電波なしでも動きます）';
+  }).catch(() => { $('#sw').textContent = 'オフライン化に失敗（https で開いてください）'; });
+  // 新しい版（新しい基準データ）が有効になったら、再読込ボタンを出す
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if(hadController) $('#upd').classList.add('show'); });
+  $('#upd').addEventListener('click', () => location.reload());
+  if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+} else {
+  $('#sw').textContent = 'このブラウザはオフライン非対応';
+}
+</script>
+</body>
+</html>
