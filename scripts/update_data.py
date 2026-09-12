@@ -335,8 +335,25 @@ def estat_find_latest(app_id: str):
     if not cands:
         raise ParseError("e-Stat のデータカタログに『都市別小売価格』のExcelが見つかりません")
     latest = max(c[0] for c in cands)
-    files = [(u, t) for ym, u, t in cands if ym == latest]
-    print(f"e-Stat 最新: {latest}（候補 {len(cands)}件中 {len(files)}ファイル）")
+    files, seen = [], set()
+    for ym, u, t in cands:
+        if ym != latest:
+            continue
+        # 表題に「1001 うるち米…」～「2183 学校給食…」と収録範囲が入っている。
+        # 食料品・日用品は5000番未満なので、着物や授業料だけの表はダウンロードしない
+        m = re.search(r"「(\d{4})", t)
+        if m and int(m.group(1)) >= 5000:
+            continue
+        # 同じ表がファイル形式ごとに複数あるので、statInfId ごとに1つだけ（fileKind=0 を優先）
+        sid = re.search(r"statInfId=(\d+)", u)
+        sid = sid.group(1) if sid else u
+        if sid in seen:
+            continue
+        if "fileKind=0" not in u and any(f"statInfId={sid}" in x and "fileKind=0" in x for _, x, _ in cands):
+            continue
+        seen.add(sid)
+        files.append((u, t))
+    print(f"e-Stat 最新: {latest}（候補 {len(cands)}件 → 使うファイル {len(files)}件）")
     for u, t in files:
         print(f"  - {t} {u}")
     return latest, files
@@ -461,6 +478,19 @@ def unit_to_amount(unit: str, spec: str):
     return None, False
 
 
+def clean_spec(spec: str, unit: str) -> str:
+    """銘柄（規格）らしくない文字列を捨てる。
+    e-Statの表では『銘柄』欄の位置が表によって違い、時間軸（例: 2026年7月）を拾うことがあるため。"""
+    t = unicodedata.normalize("NFKC", spec or "").strip()
+    if not t or t == unicodedata.normalize("NFKC", unit or "").strip():
+        return ""
+    if re.fullmatch(r"[\d,.\s%年月日/()-]+", t):     # 数字・日付だけ
+        return ""
+    if re.search(r"20\d{2}\s*年\s*\d{1,2}\s*月", t):
+        return ""
+    return t
+
+
 def make_readings(names):
     try:
         import pykakasi
@@ -484,13 +514,14 @@ def build_estat(raw_items, old_items):
         base = re.split(r"[(（]", name)[0].strip()
         if base in ESTAT_DUP or name in ESTAT_DUP:
             continue
-        g, vol = unit_to_amount(it["unit"], it["spec"])
+        spec = clean_spec(it["spec"], it["unit"])
+        g, vol = unit_to_amount(it["unit"], spec)
         price = round(it["price"])
         prev = old.get(code)
         if prev and not (RATIO_MIN <= price / prev["p"] <= RATIO_MAX):
             skipped_ratio.append(f"{name}: {prev['p']}→{price}")
             price = prev["p"]  # 極端な変化は読み取りミスとみなして前回値を維持
-        e = {"c": code, "n": name, "s": it["spec"], "u": it["unit"], "g": g, "p": price}
+        e = {"c": code, "n": name, "s": spec, "u": it["unit"], "g": g, "p": price}
         if vol:
             e["v"] = 1
         base_names[code] = base
