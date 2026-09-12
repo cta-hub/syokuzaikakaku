@@ -21,6 +21,7 @@ import io
 import json
 import re
 import sys
+import traceback
 import unicodedata
 import urllib.request
 from pathlib import Path
@@ -34,7 +35,7 @@ SW = ROOT / "sw.js"
 LIST_URL = "https://www.city.sapporo.jp/shohi/01-shohi/05-information/seikatsu.html"
 UA = "Mozilla/5.0 (X11; Linux x86_64) kaidoki-updater/1.0"
 
-# アプリの品目ID → PDF上の (品目名, 規格の末尾)。PDFの表記に合わせる（ひらがな表記に注意）
+# アプリの品目ID → PDF上の (品目名, 単位)。PDFの表記に合わせる（ひらがな表記・国産◯◯に注意）
 ROWS = {
     "cabbage": ("きゃべつ", "100g"),
     "onion": ("玉ねぎ", "100g"),
@@ -48,8 +49,8 @@ ROWS = {
     "negi": ("長ねぎ", "100g"),
     "spinach": ("ほうれん草", "100g"),
     "shiitake": ("生しいたけ", "100g"),
-    "chicken": ("鶏肉", "100g"),
-    "pork": ("豚肉", "100g"),
+    "chicken": ("国産鶏肉", "100g"),
+    "pork": ("国産豚肉", "100g"),
     "egg": ("鶏卵", "1ケース"),
     "milk": ("牛乳", "1本"),
 }
@@ -58,6 +59,7 @@ RATIO_MIN, RATIO_MAX = 0.4, 2.5
 DATA_RE = re.compile(r"/\*DATA-BEGIN\*/(.*?)/\*DATA-END\*/", re.S)
 VERSION_RE = re.compile(r"^const VERSION = '[^']*';", re.M)
 NUM = r"\d{1,3}(?:,\d{3})+|\d+"
+RANGE_RE = re.compile(r"([\d,]+)\s*～\s*([\d,]+)\s+([\d,]+)")
 
 
 class NetError(Exception):
@@ -103,22 +105,36 @@ def _spaced(s: str) -> str:
 
 
 def parse_prices(text: str) -> dict:
-    t = unicodedata.normalize("NFKC", text)  # 全角数字・全角g・ℓ などを半角に
+    """PDF3ページ目の表を1行ずつ読む。実際の並びは
+         品目群 品目名 規格 単位 最安 ～ 最高 平均価格 前月価格 前月比(%)
+       例： 青果物 きゃべつ 普通品 100g 8 ～ 43 21 16 31.3%
+       → 「最安 ～ 最高 平均」の3つ組を取る（～があるので列を間違えない）"""
+    t = unicodedata.normalize("NFKC", text).replace("〜", "～").replace("~", "～")
+    lines = [ln for ln in t.splitlines() if "～" in ln]
     out, missing = {}, []
-    for key, (name, spec) in ROWS.items():
-        pat = re.compile(
-            _spaced(name) + r"[\s\S]{0,40}?" + _spaced(spec) + r"((?:\s*円?\s*(?:" + NUM + r")){3})"
-        )
-        m = pat.search(t)
-        if not m:
+    for key, (name, unit) in ROWS.items():
+        name_re = re.compile(_spaced(name))
+        unit_re = re.compile(_spaced(unit))
+        hit = None
+        for ln in lines:
+            if not name_re.search(ln):
+                continue
+            m = RANGE_RE.search(ln)
+            if not m:
+                continue
+            if not unit_re.search(ln):   # 単位（100g / 1ケース / 1本）が違う行は別品目
+                continue
+            hit = m
+            break
+        if not hit:
             missing.append(name)
             continue
-        nums = [int(x.replace(",", "")) for x in re.findall(NUM, m.group(1))][:3]
-        # 表の列順（平均/最高/最低 など）に依存しないよう、3つの中央値を平均とみなす
-        lo, avg, hi = sorted(nums)
+        lo, hi, avg = (int(x.replace(",", "")) for x in hit.groups())
         out[key] = {"avg": avg, "min": lo, "max": hi}
     if missing:
-        raise ParseError("PDFから読み取れなかった品目: " + "、".join(missing))
+        head = "\n  ".join(lines[:6]) or t[:500]
+        raise ParseError("PDFから読み取れなかった品目: " + "、".join(missing)
+                         + "\n  PDFの該当行の例:\n  " + head)
     return out
 
 
@@ -130,12 +146,13 @@ def parse_period(text: str, date8: str) -> str:
     return f"{date8[:4]}-{date8[4:6]}"
 
 
-def validate(new: dict, old: dict) -> None:
+def validate(new: dict, old: dict, check_ratio: bool = True) -> None:
+    """check_ratio=False は同じ月のPDFと照合し直す場合（埋め込み値が間違っている可能性があるので比較しない）"""
     errs = []
     for k, v in new.items():
         if not (0 < v["min"] <= v["avg"] <= v["max"]):
             errs.append(f"{k}: 最安/平均/最高 の整合が取れない {v}")
-        prev = old.get(k, {}).get("avg")
+        prev = old.get(k, {}).get("avg") if check_ratio else None
         if prev and not (RATIO_MIN <= v["avg"] / prev <= RATIO_MAX):
             errs.append(f"{k}: 平均が前回 {prev} → {v['avg']} と極端に変化（読み取りミスの可能性）")
     if errs:
@@ -186,14 +203,14 @@ def fetch_and_update(verify: bool) -> bool:
     text = pdf_text(http_get(url))
     prices = parse_prices(text)
     period = parse_period(text, date8)
-    validate(prices, data["prices"])
+    validate(prices, data["prices"], check_ratio=is_new)
 
-    if not is_new:  # --verify：取り込み済みの値とPDFの読み取り結果が一致するか
-        diff = [f"{k}: 埋め込み {data['prices'][k]} / PDF {v}" for k, v in prices.items() if data["prices"].get(k) != v]
-        if diff:
-            raise ParseError("埋め込み値とPDFが一致しません:\n  " + "\n  ".join(diff))
-        print("検証OK：埋め込み値とPDFの読み取り結果は一致")
-        return False
+    if not is_new:  # --verify：取り込み済みの値とPDFを照合。違えばPDF（公式）を正として直す
+        diff = [f"{k}: 埋め込み {data['prices'][k]} → PDF {v}" for k, v in prices.items() if data["prices"].get(k) != v]
+        if not diff:
+            print("検証OK：埋め込み値とPDFの読み取り結果は一致")
+            return False
+        print("::warning::埋め込み値とPDFが違うため、PDFの値に合わせます:\n  " + "\n  ".join(diff))
 
     for k, v in prices.items():
         print(f"  {k:9s} {data['prices'].get(k, {}).get('avg', '-'):>5} → {v['avg']:>5}  ({v['min']}〜{v['max']})")
@@ -515,8 +532,9 @@ def main() -> int:
             fetch_and_update(args.verify)
         except NetError as e:
             print(f"::warning::{e}（今回はスキップ）")
-        except ParseError as e:
+        except Exception as e:  # noqa: BLE001  想定外の落ち方でも総務省側は続行させる
             print(f"::error::札幌市データ: {e}")
+            traceback.print_exc()
             failed = True
         # 総務省（検索用の品目）。札幌市側が失敗しても実行する
         app_id = os.environ.get("ESTAT_APP_ID", "").strip()
@@ -527,8 +545,9 @@ def main() -> int:
                 estat_update(app_id, args.verify)
             except NetError as e:
                 print(f"::warning::{e}（今回はスキップ）")
-            except ParseError as e:
+            except Exception as e:  # noqa: BLE001
                 print(f"::error::総務省データ: {e}")
+                traceback.print_exc()
                 failed = True
     bump_version()
     return 1 if failed else 0
